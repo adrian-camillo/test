@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gym Timer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F5F4EF;
+      --surface:   #FFFFFF;
+      --border:    #E8E4DC;
+      --text:      #1A1714;
+      --text-2:    #6B6560;
+      --text-3:    #A09A93;
+      --accent:    #CC785C;
+      --accent-bg: #FAF0EB;
+      --green:     #3D8B60;
+      --green-bg:  #EAF5EE;
+      --blue:      #3B6EA5;
+      --blue-bg:   #EBF2FB;
+      --red:       #B84040;
+      --red-bg:    #FAECEC;
+      --radius:    14px;
+      --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text);
+      letter-spacing: -.2px;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .session-badge {
+      font-size: .75rem;
+      font-weight: 500;
+      color: var(--text-3);
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+    }
+    #sessionTime {
+      font-variant-numeric: tabular-nums;
+      color: var(--text-2);
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 480px;
+    }
+
+    /* ── Exercise input ── */
+    .exercise-row {
+      padding: 20px 24px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .exercise-row label {
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-3);
+      white-space: nowrap;
+    }
+    #exerciseInput {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      background: transparent;
+      padding: 4px 0;
+      border-bottom: 2px solid transparent;
+      transition: border-color .2s;
+    }
+    #exerciseInput:focus { border-bottom-color: var(--accent); }
+    #exerciseInput::placeholder { font-weight: 400; color: var(--text-3); }
+
+    /* ── Status pill ── */
+    .status-row {
+      padding: 16px 24px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .1px;
+      transition: all .25s;
+    }
+    .status-pill .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+    }
+    .status-pill.idle    { background: var(--bg);       color: var(--text-2); }
+    .status-pill.idle .dot    { background: var(--text-3); }
+    .status-pill.active  { background: var(--green-bg); color: var(--green); }
+    .status-pill.active .dot  { background: var(--green); animation: pulse 1.2s ease infinite; }
+    .status-pill.resting { background: var(--blue-bg);  color: var(--blue); }
+    .status-pill.resting .dot { background: var(--blue); animation: pulse 2s ease infinite; }
+    .status-pill.done    { background: var(--accent-bg); color: var(--accent); }
+    .status-pill.done .dot    { background: var(--accent); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .5; transform: scale(.7); }
+    }
+
+    .set-counter {
+      margin-left: auto;
+      font-size: .8rem;
+      color: var(--text-3);
+      font-weight: 500;
+    }
+
+    /* ── Timer display ── */
+    .timer-section {
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+    .timer-label {
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-3);
+      margin-bottom: 10px;
+    }
+    .timer-display {
+      font-size: clamp(3.5rem, 14vw, 5rem);
+      font-weight: 300;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -2px;
+      color: var(--text);
+      line-height: 1;
+      transition: color .3s;
+    }
+    .timer-display.active  { color: var(--green); }
+    .timer-display.resting { color: var(--blue); }
+    .timer-display.done    { color: var(--accent); }
+
+    /* ── Buttons ── */
+    .btn-row {
+      padding: 0 24px 24px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      flex: 1;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 12px;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: .1px;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .35; cursor: not-allowed; transform: none !important; }
+
+    .btn-primary   { background: var(--accent);  color: #fff; }
+    .btn-primary:hover:not(:disabled)   { background: #B86748; }
+    .btn-secondary { background: var(--blue-bg); color: var(--blue); border: 1px solid #C5D8EF; }
+    .btn-secondary:hover:not(:disabled) { background: #DCE9F6; }
+    .btn-success   { background: var(--green-bg); color: var(--green); border: 1px solid #BCDECB; }
+    .btn-success:hover:not(:disabled)   { background: #D6EDDE; }
+    .btn-ghost     { background: var(--bg); color: var(--text-2); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled)     { background: var(--border); }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 24px;
+    }
+
+    /* ── Log ── */
+    .log-header {
+      padding: 18px 24px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .log-header h2 {
+      font-size: .8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-3);
+    }
+    .clear-btn {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: .75rem;
+      color: var(--text-3);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color .15s, background .15s;
+    }
+    .clear-btn:hover { color: var(--red); background: var(--red-bg); }
+
+    .log-list {
+      padding: 0 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .log-list::-webkit-scrollbar { width: 4px; }
+    .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .log-entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: .85rem;
+      animation: slideIn .25s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .log-entry.type-set     { background: var(--green-bg); }
+    .log-entry.type-rest    { background: var(--blue-bg); }
+    .log-entry.type-done    { background: var(--accent-bg); }
+    .log-entry.type-start   { background: var(--bg); }
+    .log-entry.type-new     { background: var(--bg); }
+
+    .log-icon { font-size: 1rem; flex-shrink: 0; }
+    .log-text { flex: 1; color: var(--text); font-weight: 500; }
+    .log-text span { font-weight: 400; color: var(--text-2); }
+    .log-time {
+      font-size: .75rem;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .log-duration {
+      font-size: .8rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      min-width: 46px;
+      text-align: right;
+    }
+    .log-entry.type-set  .log-duration { color: var(--green); }
+    .log-entry.type-rest .log-duration { color: var(--blue); }
+    .log-entry.type-done .log-duration { color: var(--accent); }
+
+    .empty-log {
+      text-align: center;
+      color: var(--text-3);
+      font-size: .85rem;
+      padding: 20px 0;
+    }
+
+    /* ── Summary card ── */
+    .summary-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-top: 16px;
+      display: none;
+    }
+    .summary-card.visible { display: block; }
+    .summary-title {
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .stat-box {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -.5px;
+    }
+    .stat-label {
+      font-size: .72rem;
+      color: var(--text-3);
+      font-weight: 500;
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏋</div>
+    Gym Timer
+  </div>
+  <div class="session-badge">Sesión <span id="sessionTime">0:00</span></div>
+</header>
+
+<div class="card">
+
+  <!-- Exercise name -->
+  <div class="exercise-row">
+    <label>Ejercicio</label>
+    <input id="exerciseInput" type="text" placeholder="Sentadillas, Press banca…" maxlength="40" />
+  </div>
+
+  <!-- Status + set counter -->
+  <div class="status-row">
+    <div class="status-pill idle" id="statusPill">
+      <div class="dot"></div>
+      <span id="statusText">Listo</span>
+    </div>
+    <div class="set-counter" id="setCounter"></div>
+  </div>
+
+  <!-- Timer -->
+  <div class="timer-section">
+    <div class="timer-label" id="timerLabel">Presiona Iniciar para empezar</div>
+    <div class="timer-display" id="timerDisplay">0:00</div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row" id="btnRow">
+    <button class="btn btn-primary" id="btnStart">▶ Iniciar Serie</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Log -->
+  <div class="log-header">
+    <h2>Actividad</h2>
+    <button class="clear-btn" id="clearBtn">Limpiar</button>
+  </div>
+  <div class="log-list" id="logList">
+    <div class="empty-log" id="emptyLog">Sin actividad aún</div>
+  </div>
+
+</div>
+
+<!-- Summary -->
+<div class="summary-card" id="summaryCard">
+  <div class="summary-title">Resumen del ejercicio</div>
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-value" id="statSets">—</div>
+      <div class="stat-label">Series</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statActive">—</div>
+      <div class="stat-label">Tiempo activo</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statRest">—</div>
+      <div class="stat-label">Tiempo de descanso</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ────────────────────────────────────────────────
+  const STATE = { IDLE: 'idle', ACTIVE: 'active', RESTING: 'resting', DONE: 'done' };
+  let state        = STATE.IDLE;
+  let segmentStart = null;   // timestamp when current segment started
+  let setCount     = 0;
+  let totalActive  = 0;      // ms
+  let totalRest    = 0;      // ms
+  let sessionStart = null;
+  let rafId        = null;
+
+  // ── DOM refs ─────────────────────────────────────────────
+  const timerDisplay  = document.getElementById('timerDisplay');
+  const timerLabel    = document.getElementById('timerLabel');
+  const statusPill    = document.getElementById('statusPill');
+  const statusText    = document.getElementById('statusText');
+  const setCounter    = document.getElementById('setCounter');
+  const btnRow        = document.getElementById('btnRow');
+  const logList       = document.getElementById('logList');
+  const emptyLog      = document.getElementById('emptyLog');
+  const summaryCard   = document.getElementById('summaryCard');
+  const sessionTimeEl = document.getElementById('sessionTime');
+  const exerciseInput = document.getElementById('exerciseInput');
+
+  // ── Helpers ──────────────────────────────────────────────
+  function fmt(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const ss = s % 60;
+    return `${m}:${String(ss).padStart(2,'0')}`;
+  }
+  function fmtShort(ms) {
+    const s = Math.floor(ms / 1000);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const rs = s % 60;
+    return rs === 0 ? `${m}m` : `${m}m ${rs}s`;
+  }
+  function now() { return performance.now(); }
+  function clockTime() {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+  }
+  function elapsed() {
+    return segmentStart ? now() - segmentStart : 0;
+  }
+
+  // ── Tick ─────────────────────────────────────────────────
+  function tick() {
+    const ms = elapsed();
+    timerDisplay.textContent = fmt(ms);
+    if (sessionStart) sessionTimeEl.textContent = fmt(now() - sessionStart);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // ── Log ──────────────────────────────────────────────────
+  function addLog(type, icon, text, duration) {
+    emptyLog.remove?.() || emptyLog.style && (emptyLog.style.display = 'none');
+
+    const entry = document.createElement('div');
+    entry.className = `log-entry type-${type}`;
+
+    const iconEl = document.createElement('div');
+    iconEl.className = 'log-icon';
+    iconEl.textContent = icon;
+
+    const textEl = document.createElement('div');
+    textEl.className = 'log-text';
+    textEl.innerHTML = text;
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'log-time';
+    timeEl.textContent = clockTime();
+
+    const durEl = document.createElement('div');
+    durEl.className = 'log-duration';
+    durEl.textContent = duration || '';
+
+    entry.append(iconEl, textEl, timeEl, durEl);
+    logList.prepend(entry);
+  }
+
+  // ── Render buttons ───────────────────────────────────────
+  function renderButtons() {
+    btnRow.innerHTML = '';
+    const make = (label, cls, id) => {
+      const b = document.createElement('button');
+      b.className = `btn ${cls}`;
+      b.id = id;
+      b.innerHTML = label;
+      btnRow.appendChild(b);
+      return b;
+    };
+
+    if (state === STATE.IDLE) {
+      make('▶&nbsp; Iniciar Serie', 'btn-primary', 'btnStart').onclick = startSet;
+    } else if (state === STATE.ACTIVE) {
+      make('⏸&nbsp; Descanso', 'btn-secondary', 'btnRest').onclick = startRest;
+      make('✓&nbsp; Terminar', 'btn-ghost', 'btnDone').onclick = finishExercise;
+    } else if (state === STATE.RESTING) {
+      make('▶&nbsp; Retomar Serie', 'btn-success', 'btnResume').onclick = resumeSet;
+      make('✓&nbsp; Terminar', 'btn-ghost', 'btnDone').onclick = finishExercise;
+    } else if (state === STATE.DONE) {
+      make('＋&nbsp; Nuevo Ejercicio', 'btn-primary', 'btnNew').onclick = newExercise;
+    }
+  }
+
+  // ── Status pill ──────────────────────────────────────────
+  function setStatus(s, label) {
+    statusPill.className = `status-pill ${s}`;
+    statusText.textContent = label;
+  }
+
+  // ── Actions ──────────────────────────────────────────────
+  function startSet() {
+    if (!sessionStart) sessionStart = now();
+    setCount++;
+    segmentStart = now();
+    state = STATE.ACTIVE;
+
+    setStatus('active', 'En serie');
+    timerLabel.textContent = `Serie ${setCount}`;
+    timerDisplay.className = 'timer-display active';
+    setCounter.textContent = `Serie ${setCount}`;
+    summaryCard.classList.remove('visible');
+
+    const ex = exerciseInput.value.trim() || 'Ejercicio';
+    addLog('start', '▶', `<b>Serie ${setCount}</b> <span>— ${ex}</span>`, '');
+
+    cancelAnimationFrame(rafId);
+    tick();
+    renderButtons();
+  }
+
+  function startRest() {
+    const ms = elapsed();
+    totalActive += ms;
+    segmentStart = now();
+    state = STATE.RESTING;
+
+    setStatus('resting', 'Descansando');
+    timerLabel.textContent = 'Tiempo de descanso';
+    timerDisplay.className = 'timer-display resting';
+
+    addLog('set', '💪', `<b>Serie ${setCount} completada</b>`, fmtShort(ms));
+
+    renderButtons();
+  }
+
+  function resumeSet() {
+    const ms = elapsed();
+    totalRest += ms;
+    setCount++;
+    segmentStart = now();
+    state = STATE.ACTIVE;
+
+    setStatus('active', 'En serie');
+    timerLabel.textContent = `Serie ${setCount}`;
+    timerDisplay.className = 'timer-display active';
+    setCounter.textContent = `Serie ${setCount}`;
+
+    addLog('rest', '😮‍💨', `<b>Descanso terminado</b> <span>— inicio Serie ${setCount}</span>`, fmtShort(ms));
+
+    renderButtons();
+  }
+
+  function finishExercise() {
+    const ms = elapsed();
+    if (state === STATE.ACTIVE)  totalActive += ms;
+    if (state === STATE.RESTING) totalRest   += ms;
+
+    cancelAnimationFrame(rafId);
+    segmentStart = null;
+    state = STATE.DONE;
+
+    setStatus('done', 'Terminado');
+    timerLabel.textContent = 'Ejercicio finalizado';
+    timerDisplay.textContent = '—';
+    timerDisplay.className = 'timer-display done';
+    setCounter.textContent = '';
+
+    const ex = exerciseInput.value.trim() || 'Ejercicio';
+    addLog('done', '✅', `<b>${ex}</b> <span>— finalizado</span>`, '');
+
+    // summary
+    document.getElementById('statSets').textContent   = setCount;
+    document.getElementById('statActive').textContent = fmtShort(totalActive);
+    document.getElementById('statRest').textContent   = fmtShort(totalRest);
+    summaryCard.classList.add('visible');
+
+    renderButtons();
+  }
+
+  function newExercise() {
+    setCount    = 0;
+    totalActive = 0;
+    totalRest   = 0;
+    segmentStart = null;
+    state = STATE.IDLE;
+
+    setStatus('idle', 'Listo');
+    timerLabel.textContent = 'Presiona Iniciar para empezar';
+    timerDisplay.textContent = '0:00';
+    timerDisplay.className = 'timer-display';
+    setCounter.textContent = '';
+    exerciseInput.value = '';
+    summaryCard.classList.remove('visible');
+
+    addLog('new', '🔄', '<b>Nuevo ejercicio</b>', '');
+
+    cancelAnimationFrame(rafId);
+    renderButtons();
+  }
+
+  // ── Clear log ────────────────────────────────────────────
+  document.getElementById('clearBtn').onclick = () => {
+    logList.innerHTML = '<div class="empty-log" id="emptyLog">Sin actividad aún</div>';
+  };
+
+  // ── Init ─────────────────────────────────────────────────
+  renderButtons();
+</script>
+</body>
+</html>
